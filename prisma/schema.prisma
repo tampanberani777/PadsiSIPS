@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String @id @default(uuid())
+  nama     String
+  username String @unique
+  password String
+  role     String
+}
+
+enum Role {
+  OWNER
+  KASIR
+  HEAD_KITCHEN
+}
+
+model Sisa {
+  id       Int      @id @default(autoincrement())
+  nama     String
+  jumlah   Float
+  satuan   String
+  kategori String
+  @@map("sisa")
+}
+
+model StokAwal {
+  id        Int      @id @default(autoincrement())
+  nama      String
+  jumlah    Float
+  satuan    String
+  kategori  String
+  @@map("stok_awal")
+}
+
+enum Kategori {
+  PRODUK
+  BAHAN
+}
+
+enum Satuan {
+  KG
+  PRODUK
+  LITER
+}
+
+model LaporanHarian {
+  id         Int      @id @default(autoincrement())
+  nama       String
+  stokAwal   Float
+  sisa       Float
+  penggunaan Float
+  kategori   String?
+  createdAt  DateTime @default(now())
+
+  @@map("laporan_harian")
+}
