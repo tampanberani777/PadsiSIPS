@@ -1,15 +1,14 @@
-import Image from 'next/image';
-import { lusitana } from '@/app/ui/fonts';
+import Image from "next/image";
 
-export default function RanggaGamingLogo() {
+export default function SIPSLogo() {
   return (
-    <div className={`${lusitana.className} flex items-center leading-none`}>
+    <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/30 shadow-md">
       <Image
-        src="/logooyako.jpg" // Ganti sesuai nama file Anda di folder public
-        alt="Rangga Gaming Store Logo"
-        width={90}  // Sesuaikan ukuran
-        height={90} // Sesuaikan ukuran
-        className="object-contain"
+        src="/logooyako.jpg"
+        alt="Logo Warung Oyako"
+        fill
+        sizes="48px"
+        className="object-cover"
       />
     </div>
   );

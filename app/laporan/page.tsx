@@ -17,7 +17,7 @@ import html2canvas from "html2canvas";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, ArcElement);
 
-interface LaporanHarian {
+interface LaporanItem {
   id: number;
   nama: string;
   stokAwal: number;
@@ -27,67 +27,55 @@ interface LaporanHarian {
   createdAt: string;
 }
 
-interface GroupedLaporan {
-  tanggal: string;
-  items: LaporanHarian[];
-}
-
 export default function LaporanPage() {
-  const [laporan, setLaporan] = useState<GroupedLaporan[]>([]);
-  const [filtered, setFiltered] = useState<GroupedLaporan[]>([]);
-  const [selected, setSelected] = useState<GroupedLaporan | null>(null);
+  const [tanggalList, setTanggalList] = useState<string[]>([]);
+  const [selectedTanggal, setSelectedTanggal] = useState<string | null>(null);
+  const [detail, setDetail] = useState<LaporanItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [popup, setPopup] = useState(false);
 
   const tableRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
-  // ===================== LOAD LAPORAN =====================
+  // =====================
+  // LOAD LIST TANGGAL
+  // =====================
   useEffect(() => {
     fetch("/api/laporan-harian")
       .then((res) => res.json())
-      .then((data: LaporanHarian[]) => {
-        if (!data || !Array.isArray(data)) return;
+      .then((data) => {
+        const seen = new Set<string>();
+        const tgls = data.reduce((arr: string[], i: any) => {
+          const tgl = (i?.createdAt ?? "").toString().split("T")[0];
+          if (tgl && !seen.has(tgl)) {
+            seen.add(tgl);
+            arr.push(tgl);
+          }
+          return arr;
+        }, []);
 
-        // Grup berdasarkan tanggal
-        const group: Record<string, LaporanHarian[]> = {};
-
-        data.forEach((item) => {
-          const tgl = item.createdAt.split("T")[0];
-          if (!group[tgl]) group[tgl] = [];
-          group[tgl].push(item);
-        });
-
-        const grouped = Object.keys(group).map((tgl) => ({
-          tanggal: tgl,
-          items: group[tgl],
-        }));
-
-        setLaporan(grouped);
-        setFiltered(grouped);
+        setTanggalList(tgls);
+        setLoading(false);
       })
-      .catch((err) => console.error("Gagal load laporan:", err));
+      .catch((err) => console.error("Gagal load tanggal:", err));
   }, []);
 
-  // ===================== FILTER =====================
-  const applyFilter = (hari: number | "all") => {
-    if (hari === "all") return setFiltered(laporan);
+  // =====================
+  // LOAD DETAIL LAPORAN
+  // =====================
+  const openDetail = async (tgl: string) => {
+    setSelectedTanggal(tgl);
+    setPopup(true);
 
-    const today = new Date();
-    const result = laporan.filter((lap) => {
-      const [y, m, d] = lap.tanggal.split("-");
-      const date = new Date(Number(y), Number(m) - 1, Number(d));
-      const diff = Math.floor((today.getTime() - date.getTime()) / 86400000);
-      return diff <= hari;
-    });
+    const res = await fetch(`/api/laporan-harian/${tgl}`);
+    const data = await res.json();
 
-    setFiltered(result);
+    setDetail(data);
   };
 
-  // ===================== DETAIL =====================
-  const openDetail = (lap: GroupedLaporan) => {
-    setSelected(lap);
-  };
-
-  // ===================== EXPORT PDF =====================
+  // =====================
+  // EXPORT PDF
+  // =====================
   const exportPDF = async () => {
     if (!tableRef.current || !chartRef.current) return;
 
@@ -95,95 +83,80 @@ export default function LaporanPage() {
     pdf.setFontSize(16);
     pdf.text("Laporan Harian Warung Oyako", 14, 18);
     pdf.setFontSize(12);
-    pdf.text(`Tanggal: ${selected?.tanggal}`, 14, 26);
+    pdf.text(`Tanggal: ${selectedTanggal}`, 14, 26);
 
-    // PAGE 1
-    const tableCanvas = await html2canvas(tableRef.current, { scale: 2 });
-    const tableImg = tableCanvas.toDataURL("image/png");
-    let imgHeight = (tableCanvas.height * 190) / tableCanvas.width;
-    pdf.addImage(tableImg, "PNG", 10, 34, 190, imgHeight);
+    // PAGE 1 - TABLE
+    const tCanvas = await html2canvas(tableRef.current, { scale: 2 });
+    const tImg = tCanvas.toDataURL("image/png");
+    let imgHeight = (tCanvas.height * 190) / tCanvas.width;
+    pdf.addImage(tImg, "PNG", 10, 34, 190, imgHeight);
 
-    // PAGE 2
+    // PAGE 2 - CHART
     pdf.addPage();
-    const chartCanvas = await html2canvas(chartRef.current, { scale: 2 });
-    const chartImg = chartCanvas.toDataURL("image/png");
-    imgHeight = (chartCanvas.height * 190) / chartCanvas.width;
-    pdf.addImage(chartImg, "PNG", 10, 20, 190, imgHeight);
+    const cCanvas = await html2canvas(chartRef.current, { scale: 2 });
+    const cImg = cCanvas.toDataURL("image/png");
+    imgHeight = (cCanvas.height * 190) / cCanvas.width;
+    pdf.addImage(cImg, "PNG", 10, 20, 190, imgHeight);
 
-    pdf.save(`Laporan-${selected?.tanggal}.pdf`);
+    pdf.save(`Laporan-${selectedTanggal}.pdf`);
   };
 
-  // ===================== CHART DATA =====================
-  const chartData = selected
-    ? {
-        labels: selected.items.map((i) => i.nama),
-        datasets: [
-          {
-            label: "Stok Awal",
-            data: selected.items.map((i) => i.stokAwal),
-            backgroundColor: "rgba(54, 162, 235, 0.8)",
-          },
-          {
-            label: "Sisa",
-            data: selected.items.map((i) => i.sisa),
-            backgroundColor: "rgba(255, 206, 86, 0.8)",
-          },
-          {
-            label: "Pemakaian",
-            data: selected.items.map((i) => i.penggunaan),
-            backgroundColor: "rgba(255, 99, 132, 0.8)",
-          },
-        ],
-      }
-    : {};
+  // =====================
+  // CHART DATA
+  // =====================
+  const chartData = {
+    labels: detail.map((i) => i.nama),
+    datasets: [
+      {
+        label: "Stok Awal",
+        data: detail.map((i) => i.stokAwal),
+        backgroundColor: "rgba(54, 162, 235, 0.8)",
+      },
+      {
+        label: "Sisa",
+        data: detail.map((i) => i.sisa),
+        backgroundColor: "rgba(255, 206, 86, 0.8)",
+      },
+      {
+        label: "Pemakaian",
+        data: detail.map((i) => i.penggunaan),
+        backgroundColor: "rgba(255, 99, 132, 0.8)",
+      },
+    ],
+  };
 
-  const pieData = selected
-    ? {
-        labels: selected.items.map((i) => i.nama),
-        datasets: [
-          {
-            label: "Persentase Pemakaian (%)",
-            data: selected.items.map((i) =>
-              i.stokAwal > 0
-                ? Math.round((i.penggunaan / i.stokAwal) * 10000) / 100
-                : 0
-            ),
-            backgroundColor: [
-              "#FF6384",
-              "#36A2EB",
-              "#FFCE56",
-              "#4BC0C0",
-              "#9966FF",
-              "#FF9F40",
-            ],
-          },
+  const pieData = {
+    labels: detail.map((i) => i.nama),
+    datasets: [
+      {
+        label: "Persentase Pemakaian (%)",
+        data: detail.map((i) =>
+          i.stokAwal > 0
+            ? Math.round((i.penggunaan / i.stokAwal) * 10000) / 100
+            : 0
+        ),
+        backgroundColor: [
+          "#FF6384",
+          "#36A2EB",
+          "#FFCE56",
+          "#4BC0C0",
+          "#9966FF",
+          "#FF9F40",
         ],
-      }
-    : {};
+      },
+    ],
+  };
 
-  // ===================== UI =====================
+  // =====================
+  // UI
+  // =====================
+  if (loading) return <p className="p-6 text-center">Memuat...</p>;
+
   return (
-    <div className="max-w-6xl mx-auto bg-white p-6 shadow rounded-lg">
-      <div className="flex justify-between mb-6">
-        <h1 className="text-3xl font-bold">Laporan Harian</h1>
+    <div className="max-w-6xl mx-auto p-6 bg-white shadow rounded-lg">
+      <h1 className="text-3xl font-bold mb-6">Laporan Harian</h1>
 
-        <div className="flex gap-2">
-          <button onClick={() => applyFilter("all")} className="px-3 py-2 bg-gray-300 rounded">
-            Semua
-          </button>
-          <button onClick={() => applyFilter(3)} className="px-3 py-2 bg-gray-300 rounded">
-            3 Hari
-          </button>
-          <button onClick={() => applyFilter(7)} className="px-3 py-2 bg-gray-300 rounded">
-            7 Hari
-          </button>
-          <button onClick={() => applyFilter(14)} className="px-3 py-2 bg-gray-300 rounded">
-            14 Hari
-          </button>
-        </div>
-      </div>
-
-      {/* TABLE LIST */}
+      {/* TABEL LIST TANGGAL */}
       <table className="w-full border rounded-lg overflow-hidden">
         <thead className="bg-gray-100">
           <tr>
@@ -193,13 +166,13 @@ export default function LaporanPage() {
         </thead>
 
         <tbody>
-          {filtered.map((lap) => (
-            <tr key={lap.tanggal} className="border-b hover:bg-gray-50">
-              <td className="py-3 px-4">{lap.tanggal}</td>
+          {tanggalList.map((tgl, idx) => (
+            <tr key={`${tgl}-${idx}`} className="border-b hover:bg-gray-50">
+              <td className="py-3 px-4">{tgl}</td>
               <td className="py-3 px-4">
                 <button
-                  onClick={() => openDetail(lap)}
-                  className="px-4 py-1 bg-blue-500 text-white rounded"
+                  onClick={() => openDetail(tgl)}
+                  className="px-4 py-1 bg-blue-600 text-white rounded"
                 >
                   Tampil
                 </button>
@@ -209,12 +182,12 @@ export default function LaporanPage() {
         </tbody>
       </table>
 
-      {/* DETAIL POPUP */}
-      {selected && (
+      {/* POPUP DETAIL */}
+      {popup && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-[820px] shadow-lg max-h-[95vh] overflow-y-auto">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[820px] max-h-[95vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">
-              Detail Laporan — {selected.tanggal}
+              Detail Laporan — {selectedTanggal}
             </h2>
 
             {/* TABLE */}
@@ -229,7 +202,7 @@ export default function LaporanPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selected.items.map((d) => (
+                  {detail.map((d) => (
                     <tr key={d.id} className="border-b">
                       <td className="py-2 px-3">{d.nama}</td>
                       <td className="py-2 px-3">{d.stokAwal}</td>
@@ -242,7 +215,7 @@ export default function LaporanPage() {
             </div>
 
             {/* CHARTS */}
-            <div ref={chartRef} className="bg-white mt-6 p-3">
+            <div ref={chartRef} className="mt-6 p-3">
               <h3 className="text-xl font-semibold mb-3">Grafik Stok & Pemakaian</h3>
               <Bar data={chartData} />
 
@@ -253,11 +226,17 @@ export default function LaporanPage() {
             </div>
 
             <div className="flex justify-between mt-6">
-              <button onClick={exportPDF} className="px-4 py-2 bg-green-600 text-white rounded">
+              <button
+                onClick={exportPDF}
+                className="px-4 py-2 bg-green-600 text-white rounded"
+              >
                 Export PDF
               </button>
 
-              <button onClick={() => setSelected(null)} className="px-4 py-2 bg-red-500 text-white rounded">
+              <button
+                onClick={() => setPopup(false)}
+                className="px-4 py-2 bg-red-500 text-white rounded"
+              >
                 Tutup
               </button>
             </div>

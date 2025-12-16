@@ -18,7 +18,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, message: "Password salah" });
     }
 
-    return NextResponse.json({ success: true, role: user.role });
+    const res = NextResponse.json({ success: true, role: user.role });
+    // Allow client to read role/auth for UI; still scoped to root path
+    res.cookies.set("sips_auth", "true", { path: "/", httpOnly: false });
+    res.cookies.set("sips_role", user.role, { path: "/", httpOnly: false });
+    return res;
   } catch (err: any) {
     console.error(err);
     return NextResponse.json({ success: false, message: "Server error" }, { status: 500 });

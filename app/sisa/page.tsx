@@ -8,6 +8,7 @@ import {
   XMarkIcon,
   ArrowUpTrayIcon
 } from "@heroicons/react/24/outline";
+import { ArrowLeftOnRectangleIcon } from "@heroicons/react/24/solid";
 
 interface Sisa {
   id: number;
@@ -33,6 +34,8 @@ export default function SisaPage() {
   const [selected, setSelected] = useState<Sisa | null>(null);
   const [formMode, setFormMode] = useState<"tambah" | "ubah" | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [flash, setFlash] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   const [confirmDelete, setConfirmDelete] = useState<Sisa | null>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -49,12 +52,19 @@ export default function SisaPage() {
   // LOAD DATA
   // ================================
   useEffect(() => {
+    const getCookie = (name: string) => {
+      if (typeof document === "undefined") return null;
+      const match = document.cookie.split("; ").find((row) => row.startsWith(`${name}=`));
+      return match ? decodeURIComponent(match.split("=")[1]) : null;
+    };
+    setRole(getCookie("sips_role"));
     const load = async () => {
       const sisa = await (await fetch("/api/sisa")).json();
       const stok = await (await fetch("/api/stok_awal")).json();
       setDataSisa(sisa);
       setStokAwal(stok);
       setLoading(false);
+      setFlash(null);
     };
     load();
   }, []);
@@ -63,9 +73,8 @@ export default function SisaPage() {
     i.nama.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredNama = stokAwal.filter(
-    (i) => i.kategori === formData.kategori
-  );
+  const filteredNama = stokAwal.filter((i) => i.kategori === formData.kategori);
+  const kategoriOptions = Array.from(new Set(stokAwal.map((i) => i.kategori)));
 
   // ================================
   // SUBMIT FORM
@@ -90,21 +99,33 @@ export default function SisaPage() {
       }),
     });
 
-    if (res.ok) {
-      const updated = await res.json();
-
-      if (formMode === "ubah") {
-        setDataSisa((prev) =>
-          prev.map((i) => (i.id === updated.id ? updated : i))
-        );
-      } else {
-        setDataSisa((prev) => [updated, ...prev]);
-      }
-
-      setFormMode(null);
-      setSelected(null);
-      setFormData({ nama: "", jumlah: "", satuan: "", kategori: "" });
+    if (!res.ok) {
+      const msg = await res.json().catch(() => null);
+      setFlash({
+        type: "error",
+        message: msg?.error || "Gagal menyimpan data, coba lagi.",
+      });
+      return;
     }
+
+    const updated = await res.json();
+
+    if (formMode === "ubah") {
+      setDataSisa((prev) =>
+        prev.map((i) => (i.id === updated.id ? updated : i))
+      );
+    } else {
+      setDataSisa((prev) => [updated, ...prev]);
+    }
+
+    setFlash({
+      type: "success",
+      message: formMode === "ubah" ? "Data berhasil diperbarui." : "Data baru tersimpan.",
+    });
+
+    setFormMode(null);
+    setSelected(null);
+    setFormData({ nama: "", jumlah: "", satuan: "", kategori: "" });
   };
 
   // ================================
@@ -115,6 +136,9 @@ export default function SisaPage() {
     if (res.ok) {
       setDataSisa((p) => p.filter((i) => i.id !== id));
       setConfirmDelete(null);
+      setFlash({ type: "success", message: "Data berhasil dihapus." });
+    } else {
+      setFlash({ type: "error", message: "Gagal menghapus data, coba lagi." });
     }
   };
 
@@ -122,6 +146,10 @@ export default function SisaPage() {
   // RESET HARIAN
   // ================================
   const resetHarian = async () => {
+    if (role !== "Owner" && role !== "head_kitchen") {
+      setFlash({ type: "error", message: "Anda tidak memiliki hak reset harian." });
+      return;
+    }
     const res = await fetch("/api/reset-harian", { method: "POST" });
     const data = await res.json();
 
@@ -130,6 +158,7 @@ export default function SisaPage() {
     // reload sisa terbaru
     const sisaBaru = await (await fetch("/api/sisa")).json();
     setDataSisa(sisaBaru);
+    setFlash({ type: "success", message: "Reset harian berhasil. Stok siap diisi ulang." });
   };
 
   // ================================
@@ -139,11 +168,18 @@ export default function SisaPage() {
     const selectedFiles = [...e.target.files].filter((f: File) =>
       f.name.endsWith(".csv")
     );
-    setFiles(selectedFiles);
+
+    // cegah file double berdasarkan nama file
+    const existingNames = new Set(files.map((f) => f.name));
+    const unique = selectedFiles.filter((f) => !existingNames.has(f.name));
+    setFiles((prev) => [...prev, ...unique]);
   };
 
   const uploadCSV = async () => {
-    if (files.length === 0) return alert("Pilih file CSV dulu");
+    if (files.length === 0) {
+      setFlash({ type: "error", message: "Pilih file CSV terlebih dahulu." });
+      return;
+    }
 
     const fd = new FormData();
     files.forEach((f) => fd.append("files", f));
@@ -151,12 +187,37 @@ export default function SisaPage() {
     const res = await fetch("/api/test-upload", { method: "POST", body: fd });
     const result = await res.json();
     setUploadResult(result);
+
+    if (res.ok && result?.savedRows > 0) {
+      setFlash({
+        type: "success",
+        message: result.message || "Upload berhasil disimpan.",
+      });
+      setShowUpload(false);
+      setFiles([]);
+    } else {
+      setFlash({
+        type: "error",
+        message: result.message || "Upload gagal. Cek format atau duplikasi.",
+      });
+    }
   };
 
   if (loading) return <p className="text-center p-6">Memuat...</p>;
 
   return (
     <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-md p-6 relative">
+      {flash && (
+        <div
+          className={`mb-4 rounded-lg px-4 py-3 text-sm ${
+            flash.type === "success"
+              ? "bg-green-50 text-green-800 border border-green-200"
+              : "bg-red-50 text-red-800 border border-red-200"
+          }`}
+        >
+          {flash.message}
+        </div>
+      )}
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
@@ -164,12 +225,14 @@ export default function SisaPage() {
 
         <div className="flex gap-3">
           {/* RESET HARIAN */}
-          <button
-            onClick={resetHarian}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
-          >
-            Reset Harian
-          </button>
+          {(role === "Owner" || role === "head_kitchen") && (
+            <button
+              onClick={resetHarian}
+              className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700"
+            >
+              Reset Harian
+            </button>
+          )}
 
           {/* UPLOAD CSV */}
           <button
@@ -264,6 +327,32 @@ export default function SisaPage() {
         </tbody>
       </table>
 
+      {/* KONFIRMASI HAPUS */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-5 rounded-lg shadow-lg w-[380px]">
+            <h3 className="text-lg font-semibold mb-3">Hapus data?</h3>
+            <p className="text-sm text-gray-700 mb-5">
+              Data sisa <span className="font-semibold">{confirmDelete.nama}</span> akan dihapus dari database.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 rounded border"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => handleDelete(confirmDelete.id)}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* POPUP UPLOAD CSV */}
       {showUpload && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
@@ -291,10 +380,135 @@ export default function SisaPage() {
             </button>
 
             {uploadResult && (
-              <pre className="bg-gray-100 p-3 mt-3 rounded">
-                {JSON.stringify(uploadResult, null, 2)}
-              </pre>
+              <div className="bg-gray-50 border border-gray-200 p-3 mt-3 rounded text-sm space-y-1">
+                <div className="font-semibold">{uploadResult.message}</div>
+                <div>Total file: {uploadResult.totalFiles}</div>
+                <div>Tersimpan: {uploadResult.savedRows}</div>
+                {(uploadResult.skippedInvalid > 0 || uploadResult.skippedDuplicate > 0) && (
+                  <div className="text-gray-600">
+                    Lewati tidak valid: {uploadResult.skippedInvalid ?? 0}, duplikat: {uploadResult.skippedDuplicate ?? 0}
+                  </div>
+                )}
+              </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* FORM TAMBAH/UBAH */}
+      {formMode && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-[420px]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold capitalize">{formMode} data sisa</h2>
+              <button
+                onClick={() => {
+                  setFormMode(null);
+                  setSelected(null);
+                }}
+              >
+                <XMarkIcon className="w-6" />
+              </button>
+            </div>
+
+            <form className="space-y-3" onSubmit={handleSubmit}>
+              <div>
+                <label className="block text-sm mb-1">Kategori</label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={formData.kategori}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      kategori: e.target.value,
+                      nama: "",
+                      satuan: "",
+                    }))
+                  }
+                  required
+                >
+                  <option value="">Pilih kategori</option>
+                  {kategoriOptions.map((k) => (
+                    <option key={k} value={k}>
+                      {k}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1">Nama</label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={formData.nama}
+                  onChange={(e) => {
+                    const namaBaru = e.target.value;
+                    const stok = stokAwal.find(
+                      (i) => i.nama === namaBaru && i.kategori === formData.kategori
+                    );
+                    setFormData((p) => ({
+                      ...p,
+                      nama: namaBaru,
+                      satuan: stok?.satuan ?? p.satuan,
+                    }));
+                  }}
+                  disabled={!formData.kategori}
+                  required
+                >
+                  <option value="">
+                    {formData.kategori ? "Pilih nama" : "Pilih kategori dulu"}
+                  </option>
+                  {filteredNama.map((i) => (
+                    <option key={i.id} value={i.nama}>
+                      {i.nama}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1">Jumlah</label>
+                <input
+                  type="number"
+                  className="w-full border rounded px-3 py-2"
+                  value={formData.jumlah}
+                  onChange={(e) => setFormData((p) => ({ ...p, jumlah: e.target.value }))}
+                  min={0}
+                  step="any"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-1">Satuan</label>
+                <input
+                  type="text"
+                  className="w-full border rounded px-3 py-2"
+                  value={formData.satuan}
+                  onChange={(e) => setFormData((p) => ({ ...p, satuan: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormMode(null);
+                    setSelected(null);
+                  }}
+                  className="px-4 py-2 rounded border"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                >
+                  Simpan
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

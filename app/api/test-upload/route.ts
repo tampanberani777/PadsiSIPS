@@ -9,10 +9,19 @@ export async function POST(req: Request) {
   const files = formData.getAll("files") as File[];
 
   if (!files || files.length === 0) {
-    return NextResponse.json({ error: "No files uploaded" });
+    return NextResponse.json(
+      { error: "Tidak ada file yang diunggah. Pastikan memilih CSV dulu." },
+      { status: 400 }
+    );
   }
 
   let saved = 0;
+  let skippedInvalid = 0;
+  let skippedDuplicate = 0;
+
+  // Ambil nama yang sudah ada supaya tidak double
+  const existing = await prisma.stokAwal.findMany({ select: { nama: true } });
+  const existingNama = new Set(existing.map((i) => i.nama.trim().toLowerCase()));
 
   for (const file of files) {
     const text = await file.text();
@@ -43,9 +52,17 @@ export async function POST(req: Request) {
       const validKategori = ["BAHAN", "PRODUK"];
 
       if (!nama || !jumlah || !validSatuan.includes(satuan) || !validKategori.includes(kategori)) {
-        console.log("SKIP data tidak valid:", raw);
+        skippedInvalid++;
         continue;
       }
+
+      const namaKey = nama.toLowerCase();
+      if (existingNama.has(namaKey)) {
+        skippedDuplicate++;
+        continue;
+      }
+
+      existingNama.add(namaKey); // cegah double dalam batch yang sama
 
       await prisma.stokAwal.create({
         data: {
@@ -64,13 +81,17 @@ export async function POST(req: Request) {
     return NextResponse.json({
       totalFiles: files.length,
       savedRows: 0,
-      message: "CSV terbaca, tapi semua baris tidak valid / formatnya salah.",
+      skippedInvalid,
+      skippedDuplicate,
+      message: "CSV sudah dibaca, tapi belum ada data yang bisa dipakai. Cek lagi format kolom atau pastikan belum pernah diunggah.",
     });
   }
 
   return NextResponse.json({
     totalFiles: files.length,
     savedRows: saved,
-    message: "Berhasil dimasukkan!",
+    skippedInvalid,
+    skippedDuplicate,
+    message: "Berhasil, data stok awal tersimpan tanpa duplikasi.",
   });
 }

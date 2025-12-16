@@ -1,10 +1,10 @@
-import '@/app/ui/global.css';
-import { inter } from '@/app/ui/fonts';
-import type { Metadata } from 'next';
+import "@/app/ui/global.css";
+import { inter } from "@/app/ui/fonts";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Rangga Gaming Store',
-  description: 'Toko Gaming dengan harga terjangkau dan berkualitas',
+  title: "SIPS",
+  description: "Sistem Informasi Pengelolaan Sisa",
 };
 
 export default function RootLayout({
@@ -14,9 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} antialiased`}>
-        {children}
-      </body>
+      <body className={`${inter.className} antialiased`}>{children}</body>
     </html>
   );
 }

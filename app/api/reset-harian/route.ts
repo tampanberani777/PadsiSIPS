@@ -3,14 +3,22 @@ import { NextResponse } from "next/server";
 
 export async function POST() {
   try {
-    // ambil stok_awal
+    // 1️⃣ Ambil stok_awal & sisa
     const stokAwal = await prisma.stokAwal.findMany();
     const sisa = await prisma.sisa.findMany();
 
-    // hitung laporan harian
+    if (stokAwal.length === 0) {
+      return NextResponse.json(
+        { error: "Stok awal kosong — tidak bisa reset harian" },
+        { status: 400 }
+      );
+    }
+
+    // 2️⃣ Hitung laporan harian berdasarkan stok_awal & sisa
     const laporan = stokAwal.map((item) => {
       const s = sisa.find((x) => x.nama === item.nama);
       const sisaJumlah = s?.jumlah ?? 0;
+
       return {
         nama: item.nama,
         stokAwal: item.jumlah,
@@ -20,30 +28,25 @@ export async function POST() {
       };
     });
 
-    // simpan ke tabel laporan_harian
+    // 3️⃣ Simpan laporan_harian (dengan tanggal hari ini)
     await prisma.laporanHarian.createMany({
       data: laporan,
     });
 
-    // reset tabel sisa
+    // 4️⃣ ❗Kosongkan tabel stok_awal & sisa
     await prisma.sisa.deleteMany();
-    await prisma.sisa.createMany({
-      data: stokAwal.map((i) => ({
-        nama: i.nama,
-        jumlah: i.jumlah,
-        satuan: i.satuan,
-        kategori: i.kategori,
-      })),
-    });
+    await prisma.stokAwal.deleteMany();
 
+    // 5️⃣ UI akan menampilkan tabel kosong — user bisa isi stok awal baru
     return NextResponse.json({
-      message: "Reset harian sukses!",
+      success: true,
+      message: "Reset harian berhasil! Semua data stok & sisa dikosongkan.",
       laporanTersimpan: laporan.length,
     });
   } catch (err) {
-    console.error(err);
+    console.error("RESET ERROR:", err);
     return NextResponse.json(
-      { error: "Reset gagal" },
+      { error: "Reset harian gagal" },
       { status: 500 }
     );
   }
