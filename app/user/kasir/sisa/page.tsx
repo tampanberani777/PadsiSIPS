@@ -215,62 +215,66 @@ export default function SisaPageKasir() {
         />
       </div>
 
-      <table className="w-full border">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="py-2 px-3">No</th>
-            <th className="py-2 px-3">Nama</th>
-            <th className="py-2 px-3">Jumlah</th>
-            <th className="py-2 px-3">Satuan</th>
-            <th className="py-2 px-3">Kategori</th>
-            <th className="py-2 px-3 text-center">Aksi</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredData.map((item, idx) => (
-            <tr key={item.id} className="border-b hover:bg-gray-50">
-              <td className="py-2 px-3">{idx + 1}</td>
-
-              <td
-                className="py-2 px-3 cursor-pointer hover:underline"
-                onClick={() => setSelected(item)}
-              >
-                {item.nama}
-              </td>
-
-              <td className="py-2 px-3">{item.jumlah}</td>
-              <td className="py-2 px-3">{item.satuan}</td>
-              <td className="py-2 px-3">{item.kategori}</td>
-
-              <td className="py-2 px-3 flex gap-3 justify-center">
-                <button
-                  onClick={() => {
-                    setFormMode("ubah");
-                    setSelected(item);
-                    setFormData({
-                      nama: item.nama,
-                      jumlah: String(item.jumlah),
-                      satuan: item.satuan,
-                      kategori: item.kategori,
-                    });
-                  }}
-                  className="text-amber-600"
-                >
-                  <PencilSquareIcon className="w-5" />
-                </button>
-
-                <button
-                  onClick={() => setConfirmDelete(item)}
-                  className="text-red-500"
-                >
-                  <TrashIcon className="w-5" />
-                </button>
-              </td>
+      <div className="overflow-hidden rounded-lg border border-gray-200">
+        <table className="w-full text-left">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-3 px-4 w-12 text-center">No</th>
+              <th className="py-3 px-4">Nama</th>
+              <th className="py-3 px-4 text-right">Jumlah</th>
+              <th className="py-3 px-4 text-center">Satuan</th>
+              <th className="py-3 px-4 text-center">Kategori</th>
+              <th className="py-3 px-4 text-center w-32">Aksi</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {filteredData.map((item, idx) => (
+              <tr key={item.id} className="border-t hover:bg-gray-50">
+                <td className="py-3 px-4 text-center">{idx + 1}</td>
+
+                <td
+                  className="py-3 px-4 cursor-pointer hover:underline"
+                  onClick={() => setSelected(item)}
+                >
+                  {item.nama}
+                </td>
+
+                <td className="py-3 px-4 text-right">{item.jumlah}</td>
+                <td className="py-3 px-4 text-center">{item.satuan}</td>
+                <td className="py-3 px-4 text-center">{item.kategori}</td>
+
+                <td className="py-3 px-4">
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      onClick={() => {
+                        setFormMode("ubah");
+                        setSelected(item);
+                        setFormData({
+                          nama: item.nama,
+                          jumlah: String(item.jumlah),
+                          satuan: item.satuan,
+                          kategori: item.kategori,
+                        });
+                      }}
+                      className="text-amber-600 hover:text-amber-700"
+                    >
+                      <PencilSquareIcon className="w-5" />
+                    </button>
+
+                    <button
+                      onClick={() => setConfirmDelete(item)}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      <TrashIcon className="w-5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">

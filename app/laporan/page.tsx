@@ -11,7 +11,6 @@ import {
   Legend,
   ArcElement,
 } from "chart.js";
-
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -27,6 +26,9 @@ interface LaporanItem {
   createdAt: string;
 }
 
+const usagePercent = (item: LaporanItem) =>
+  item.stokAwal > 0 ? Math.round((item.penggunaan / item.stokAwal) * 10000) / 100 : 0;
+
 export default function LaporanPage() {
   const [tanggalList, setTanggalList] = useState<string[]>([]);
   const [selectedTanggal, setSelectedTanggal] = useState<string | null>(null);
@@ -37,9 +39,6 @@ export default function LaporanPage() {
   const tableRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
 
-  // =====================
-  // LOAD LIST TANGGAL
-  // =====================
   useEffect(() => {
     fetch("/api/laporan-harian")
       .then((res) => res.json())
@@ -53,29 +52,20 @@ export default function LaporanPage() {
           }
           return arr;
         }, []);
-
         setTanggalList(tgls);
         setLoading(false);
       })
       .catch((err) => console.error("Gagal load tanggal:", err));
   }, []);
 
-  // =====================
-  // LOAD DETAIL LAPORAN
-  // =====================
   const openDetail = async (tgl: string) => {
     setSelectedTanggal(tgl);
     setPopup(true);
-
     const res = await fetch(`/api/laporan-harian/${tgl}`);
     const data = await res.json();
-
     setDetail(data);
   };
 
-  // =====================
-  // EXPORT PDF
-  // =====================
   const exportPDF = async () => {
     if (!tableRef.current || !chartRef.current) return;
 
@@ -85,13 +75,11 @@ export default function LaporanPage() {
     pdf.setFontSize(12);
     pdf.text(`Tanggal: ${selectedTanggal}`, 14, 26);
 
-    // PAGE 1 - TABLE
     const tCanvas = await html2canvas(tableRef.current, { scale: 2 });
     const tImg = tCanvas.toDataURL("image/png");
     let imgHeight = (tCanvas.height * 190) / tCanvas.width;
     pdf.addImage(tImg, "PNG", 10, 34, 190, imgHeight);
 
-    // PAGE 2 - CHART
     pdf.addPage();
     const cCanvas = await html2canvas(chartRef.current, { scale: 2 });
     const cImg = cCanvas.toDataURL("image/png");
@@ -101,9 +89,6 @@ export default function LaporanPage() {
     pdf.save(`Laporan-${selectedTanggal}.pdf`);
   };
 
-  // =====================
-  // CHART DATA
-  // =====================
   const chartData = {
     labels: detail.map((i) => i.nama),
     datasets: [
@@ -130,11 +115,7 @@ export default function LaporanPage() {
     datasets: [
       {
         label: "Persentase Pemakaian (%)",
-        data: detail.map((i) =>
-          i.stokAwal > 0
-            ? Math.round((i.penggunaan / i.stokAwal) * 10000) / 100
-            : 0
-        ),
+        data: detail.map((i) => usagePercent(i)),
         backgroundColor: [
           "#FF6384",
           "#36A2EB",
@@ -147,74 +128,70 @@ export default function LaporanPage() {
     ],
   };
 
-  // =====================
-  // UI
-  // =====================
   if (loading) return <p className="p-6 text-center">Memuat...</p>;
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white shadow rounded-lg">
       <h1 className="text-3xl font-bold mb-6">Laporan Harian</h1>
 
-      {/* TABEL LIST TANGGAL */}
-      <table className="w-full border rounded-lg overflow-hidden">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="py-3 px-4">Tanggal</th>
-            <th className="py-3 px-4">Aksi</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {tanggalList.map((tgl, idx) => (
-            <tr key={`${tgl}-${idx}`} className="border-b hover:bg-gray-50">
-              <td className="py-3 px-4">{tgl}</td>
-              <td className="py-3 px-4">
-                <button
-                  onClick={() => openDetail(tgl)}
-                  className="px-4 py-1 bg-blue-600 text-white rounded"
-                >
-                  Tampil
-                </button>
-              </td>
+      <div className="overflow-hidden rounded-lg border">
+        <table className="w-full">
+          <thead className="bg-gray-100 text-left">
+            <tr>
+              <th className="py-3 px-4 w-2/3">Tanggal</th>
+              <th className="py-3 px-4 text-center">Aksi</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {tanggalList.map((tgl, idx) => (
+              <tr key={`${tgl}-${idx}`} className="border-t hover:bg-gray-50">
+                <td className="py-3 px-4">{tgl}</td>
+                <td className="py-3 px-4 text-center">
+                  <button
+                    onClick={() => openDetail(tgl)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded"
+                  >
+                    Tampil
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      {/* POPUP DETAIL */}
       {popup && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-[820px] max-h-[95vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">
-              Detail Laporan — {selectedTanggal}
-            </h2>
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[840px] max-h-[95vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold mb-4">Detail Laporan — {selectedTanggal}</h2>
 
-            {/* TABLE */}
             <div ref={tableRef} className="bg-white p-3">
-              <table className="w-full border">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="py-2 px-3">Nama</th>
-                    <th className="py-2 px-3">Stok Awal</th>
-                    <th className="py-2 px-3">Sisa</th>
-                    <th className="py-2 px-3">Pemakaian</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.map((d) => (
-                    <tr key={d.id} className="border-b">
-                      <td className="py-2 px-3">{d.nama}</td>
-                      <td className="py-2 px-3">{d.stokAwal}</td>
-                      <td className="py-2 px-3">{d.sisa}</td>
-                      <td className="py-2 px-3">{d.penggunaan}</td>
+              <div className="overflow-hidden rounded-lg border">
+                <table className="w-full">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="py-2 px-3">Nama</th>
+                      <th className="py-2 px-3 text-right">Stok Awal</th>
+                      <th className="py-2 px-3 text-right">Sisa</th>
+                      <th className="py-2 px-3 text-right">Pemakaian</th>
+                      <th className="py-2 px-3 text-right">% Terpakai</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {detail.map((d) => (
+                      <tr key={d.id} className="border-t">
+                        <td className="py-2 px-3">{d.nama}</td>
+                        <td className="py-2 px-3 text-right">{d.stokAwal}</td>
+                        <td className="py-2 px-3 text-right">{d.sisa}</td>
+                        <td className="py-2 px-3 text-right">{d.penggunaan}</td>
+                        <td className="py-2 px-3 text-right">{usagePercent(d)}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            {/* CHARTS */}
             <div ref={chartRef} className="mt-6 p-3">
               <h3 className="text-xl font-semibold mb-3">Grafik Stok & Pemakaian</h3>
               <Bar data={chartData} />

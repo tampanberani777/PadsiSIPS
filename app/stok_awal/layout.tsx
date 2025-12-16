@@ -28,7 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     const loggedIn = getCookie("sips_auth") === "true";
     const r = getCookie("sips_role");
     setRole(r);
-    if (!loggedIn || (r !== "Owner" && r !== "head_kitchen")) {
+    if (!loggedIn || (r !== "Owner" && r !== "headK itchen")) {
       setAuthorized(false);
       router.replace("/login?reason=must-login");
     } else {
