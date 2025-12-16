@@ -16,7 +16,7 @@ export async function POST() {
 
     // 2️⃣ Hitung laporan harian berdasarkan stok_awal & sisa
     const laporan = stokAwal.map((item: { nama: string; jumlah: number; kategori: string }) => {
-      const s = sisa.find((x) => x.nama === item.nama);
+      const s = sisa.find((x: { nama: string; jumlah: number }) => x.nama === item.nama);
       const sisaJumlah = s?.jumlah ?? 0;
 
       return {
