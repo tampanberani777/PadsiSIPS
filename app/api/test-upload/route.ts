@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   // Ambil nama yang sudah ada supaya tidak double
   const existing = await prisma.stokAwal.findMany({ select: { nama: true } });
-  const existingNama = new Set(existing.map((i) => i.nama.trim().toLowerCase()));
+  const existingNama = new Set(existing.map((i: { nama: string }) => i.nama.trim().toLowerCase()));
 
   for (const file of files) {
     const text = await file.text();
