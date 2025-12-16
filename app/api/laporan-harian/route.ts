@@ -10,7 +10,7 @@ export async function GET() {
     });
 
     const seen = new Set<string>();
-    const tanggalPerHari = list.reduce<{ createdAt: string }[]>((acc, item) => {
+    const tanggalPerHari = list.reduce((acc: { createdAt: string }[], item) => {
       const dateStr =
         item.createdAt instanceof Date
           ? item.createdAt.toISOString().split("T")[0]
