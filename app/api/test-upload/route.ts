@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       delimiter: delimiter,
     });
 
-    for (const raw of records) {
+    for (const raw of records as Array<{ nama?: string; jumlah?: any; satuan?: string; kategori?: string }>) {
       let nama = raw.nama?.trim();
       let jumlah = parseFloat(raw.jumlah);
       let satuan = raw.satuan?.trim().toUpperCase();
