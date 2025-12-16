@@ -51,7 +51,14 @@ export async function POST(req: Request) {
       const validSatuan = ["KG", "PRODUK", "LITER"];
       const validKategori = ["BAHAN", "PRODUK"];
 
-      if (!nama || !jumlah || !validSatuan.includes(satuan) || !validKategori.includes(kategori)) {
+      if (
+        !nama ||
+        Number.isNaN(jumlah) ||
+        !satuan ||
+        !kategori ||
+        !validSatuan.includes(satuan) ||
+        !validKategori.includes(kategori)
+      ) {
         skippedInvalid++;
         continue;
       }
