@@ -79,7 +79,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-lg text-amber-50">
-              Kelola data sisa, pantau reset harian, dan simpan laporan dalam satu dashboard.
+              Kelola data sisa anda secara efisien dalam satu dashboard.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
