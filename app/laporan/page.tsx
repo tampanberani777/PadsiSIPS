@@ -29,12 +29,15 @@ interface LaporanItem {
 const usagePercent = (item: LaporanItem) =>
   item.stokAwal > 0 ? Math.round((item.penggunaan / item.stokAwal) * 10000) / 100 : 0;
 
+const FILTER_OPTIONS = [3, 7, 14, 30];
+
 export default function LaporanPage() {
   const [tanggalList, setTanggalList] = useState<string[]>([]);
   const [selectedTanggal, setSelectedTanggal] = useState<string | null>(null);
   const [detail, setDetail] = useState<LaporanItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [popup, setPopup] = useState(false);
+  const [filterDays, setFilterDays] = useState<number>(7);
 
   const tableRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -130,9 +133,36 @@ export default function LaporanPage() {
 
   if (loading) return <p className="p-6 text-center">Memuat...</p>;
 
+  const filteredTanggalList = tanggalList.filter((tgl) => {
+    const date = new Date(`${tgl}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return false;
+
+    const now = new Date();
+    const diffDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays <= filterDays - 1;
+  });
+
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white shadow rounded-lg">
       <h1 className="text-3xl font-bold mb-6">Laporan Harian</h1>
+
+      <div className="mb-4 flex items-center gap-3">
+        <label htmlFor="filterRange" className="text-sm font-medium text-gray-700">
+          Rentang:
+        </label>
+        <select
+          id="filterRange"
+          value={filterDays}
+          onChange={(e) => setFilterDays(Number(e.target.value))}
+          className="rounded border px-3 py-2 text-sm"
+        >
+          {FILTER_OPTIONS.map((day) => (
+            <option key={day} value={day}>
+              {day} hari terakhir
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="overflow-hidden rounded-lg border">
         <table className="w-full">
@@ -143,7 +173,7 @@ export default function LaporanPage() {
             </tr>
           </thead>
           <tbody>
-            {tanggalList.map((tgl, idx) => (
+            {filteredTanggalList.map((tgl, idx) => (
               <tr key={`${tgl}-${idx}`} className="border-t hover:bg-gray-50">
                 <td className="py-3 px-4">{tgl}</td>
                 <td className="py-3 px-4 text-center">
