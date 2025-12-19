@@ -53,13 +53,6 @@ function LoginForm() {
       return;
     }
 
-    if (inputCaptcha !== captcha) {
-      setError("Captcha salah!");
-      generateCaptcha();
-      setInputCaptcha("");
-      return;
-    }
-
     try {
       const res = await fetch("/api/login", {
         method: "POST",
@@ -117,6 +110,7 @@ function LoginForm() {
           <div>
             <label className="block text-sm mb-1 text-gray-200">Username</label>
             <input
+              name="username"
               type="text"
               placeholder="Masukkan username"
               value={username}
@@ -129,6 +123,7 @@ function LoginForm() {
           <div>
             <label className="block text-sm mb-1 text-gray-200">Password</label>
             <input
+              name="password"
               type="password"
               placeholder="Masukkan password"
               value={password}
@@ -153,6 +148,7 @@ function LoginForm() {
               </button>
             </div>
             <input
+              name="captcha"
               type="text"
               placeholder="Masukkan captcha"
               value={inputCaptcha}
