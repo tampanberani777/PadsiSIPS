@@ -5,7 +5,7 @@ import { FaRedo } from "react-icons/fa";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
-  const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
+  const isTestMode = process.env.NEXT_PUBLIC_DISABLE_CAPTCHA === "true";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [captcha, setCaptcha] = useState("");
@@ -164,7 +164,7 @@ function LoginForm() {
             />
             {isTestMode && (
               <div className="text-xs text-emerald-200 mt-1">
-                Test mode aktif: captcha otomatis valid untuk E2E.
+                Mode testing aktif (captcha dinonaktifkan).
               </div>
             )}
           </div>
