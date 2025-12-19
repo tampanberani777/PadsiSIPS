@@ -5,6 +5,7 @@ import { FaRedo } from "react-icons/fa";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
+  const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [captcha, setCaptcha] = useState("");
@@ -15,6 +16,8 @@ function LoginForm() {
   const reason = searchParams.get("reason");
 
   useEffect(() => {
+    if (isTestMode) return;
+
     const getCookie = (name: string) => {
       if (typeof document === "undefined") return null;
       const match = document.cookie
@@ -29,7 +32,7 @@ function LoginForm() {
       else if (role === "Owner" || role === "head_kitchen") router.replace("/user/HK");
       else router.replace("/");
     }
-  }, [router]);
+  }, [router, isTestMode]);
 
   const generateCaptcha = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -53,7 +56,7 @@ function LoginForm() {
       return;
     }
 
-    if (inputCaptcha !== captcha) {
+    if (!isTestMode && inputCaptcha !== captcha) {
       setError("Captcha salah!");
       generateCaptcha();
       setInputCaptcha("");
@@ -159,6 +162,11 @@ function LoginForm() {
               onChange={(e) => setInputCaptcha(e.target.value)}
               className="w-full p-3 mt-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
             />
+            {isTestMode && (
+              <div className="text-xs text-emerald-200 mt-1">
+                Test mode aktif: captcha otomatis valid untuk E2E.
+              </div>
+            )}
           </div>
 
           {error && (
