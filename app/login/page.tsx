@@ -5,7 +5,6 @@ import { FaRedo } from "react-icons/fa";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
-  const isTestMode = process.env.NEXT_PUBLIC_DISABLE_CAPTCHA === "true";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [captcha, setCaptcha] = useState("");
@@ -16,8 +15,6 @@ function LoginForm() {
   const reason = searchParams.get("reason");
 
   useEffect(() => {
-    if (isTestMode) return;
-
     const getCookie = (name: string) => {
       if (typeof document === "undefined") return null;
       const match = document.cookie
@@ -32,7 +29,7 @@ function LoginForm() {
       else if (role === "Owner" || role === "head_kitchen") router.replace("/user/HK");
       else router.replace("/");
     }
-  }, [router, isTestMode]);
+  }, [router]);
 
   const generateCaptcha = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -56,7 +53,7 @@ function LoginForm() {
       return;
     }
 
-    if (!isTestMode && inputCaptcha !== captcha) {
+    if (inputCaptcha !== captcha) {
       setError("Captcha salah!");
       generateCaptcha();
       setInputCaptcha("");
@@ -162,11 +159,6 @@ function LoginForm() {
               onChange={(e) => setInputCaptcha(e.target.value)}
               className="w-full p-3 mt-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
             />
-            {isTestMode && (
-              <div className="text-xs text-emerald-200 mt-1">
-                Mode testing aktif (captcha dinonaktifkan).
-              </div>
-            )}
           </div>
 
           {error && (
