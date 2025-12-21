@@ -6,10 +6,25 @@ import { useRouter, useSearchParams } from "next/navigation";
 function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [captchaText, setCaptchaText] = useState("");
+  const [captchaInput, setCaptchaInput] = useState("");
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
   const reason = searchParams.get("reason");
+
+  const generateCaptcha = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    let result = "";
+    for (let i = 0; i < 5; i += 1) {
+      result += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return result;
+  };
+
+  useEffect(() => {
+    setCaptchaText(generateCaptcha());
+  }, []);
 
   useEffect(() => {
     const getCookie = (name: string) => {
@@ -37,11 +52,23 @@ function LoginForm() {
       return;
     }
 
+    if (!captchaInput) {
+      setError("Captcha wajib diisi!");
+      return;
+    }
+
+    if (captchaInput.trim().toLowerCase() !== captchaText.trim().toLowerCase()) {
+      setError("Captcha salah");
+      setCaptchaText(generateCaptcha());
+      setCaptchaInput("");
+      return;
+    }
+
     try {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, captcha: "VALID" }),
       });
 
       const data = await res.json();
@@ -112,6 +139,34 @@ function LoginForm() {
               placeholder="Masukkan password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
+            />
+          </div>
+
+          {/* Captcha */}
+          <div>
+            <label className="block text-sm mb-1 text-gray-200">Captcha</label>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="px-3 py-2 rounded bg-emerald-600 text-white font-semibold tracking-widest">
+                {captchaText}
+              </div>
+              <button
+                type="button"
+                className="px-3 py-2 rounded bg-white/10 border border-white/20 text-white hover:bg-white/20"
+                onClick={() => {
+                  setCaptchaText(generateCaptcha());
+                  setCaptchaInput("");
+                }}
+              >
+                Refresh
+              </button>
+            </div>
+            <input
+              name="captcha"
+              type="text"
+              placeholder="Masukkan captcha"
+              value={captchaInput}
+              onChange={(e) => setCaptchaInput(e.target.value)}
               className="w-full p-3 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
             />
           </div>
