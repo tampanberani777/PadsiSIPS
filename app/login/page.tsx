@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { FaRedo } from "react-icons/fa";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [captcha, setCaptcha] = useState("");
-  const [inputCaptcha, setInputCaptcha] = useState("");
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -30,19 +27,6 @@ function LoginForm() {
       else router.replace("/");
     }
   }, [router]);
-
-  const generateCaptcha = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let code = "";
-    for (let i = 0; i < 5; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setCaptcha(code);
-  };
-
-  useEffect(() => {
-    generateCaptcha();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,31 +113,6 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full p-3 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
-            />
-          </div>
-
-          {/* Captcha */}
-          <div>
-            <label className="block text-sm mb-1 text-gray-200">Captcha</label>
-            <div className="flex items-center gap-2">
-              <div className="bg-emerald-600/80 text-white font-bold px-3 py-2 rounded select-none tracking-wider">
-                {captcha}
-              </div>
-              <button
-                type="button"
-                onClick={generateCaptcha}
-                className="text-emerald-200 hover:text-white"
-              >
-                <FaRedo />
-              </button>
-            </div>
-            <input
-              name="captcha"
-              type="text"
-              placeholder="Masukkan captcha"
-              value={inputCaptcha}
-              onChange={(e) => setInputCaptcha(e.target.value)}
-              className="w-full p-3 mt-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
             />
           </div>
 
