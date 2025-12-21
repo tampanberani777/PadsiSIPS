@@ -1,29 +1,30 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { FaRedo } from "react-icons/fa";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [captchaText, setCaptchaText] = useState("");
-  const [captchaInput, setCaptchaInput] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [inputCaptcha, setInputCaptcha] = useState("");
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
   const reason = searchParams.get("reason");
 
   const generateCaptcha = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-    let result = "";
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let code = "";
     for (let i = 0; i < 5; i += 1) {
-      result += chars[Math.floor(Math.random() * chars.length)];
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    return result;
+    setCaptcha(code);
   };
 
   useEffect(() => {
-    setCaptchaText(generateCaptcha());
+    generateCaptcha();
   }, []);
 
   useEffect(() => {
@@ -52,15 +53,15 @@ function LoginForm() {
       return;
     }
 
-    if (!captchaInput) {
+    if (!inputCaptcha) {
       setError("Captcha wajib diisi!");
       return;
     }
 
-    if (captchaInput.trim().toLowerCase() !== captchaText.trim().toLowerCase()) {
+    if (inputCaptcha.trim().toLowerCase() !== captcha.trim().toLowerCase()) {
       setError("Captcha salah");
-      setCaptchaText(generateCaptcha());
-      setCaptchaInput("");
+      generateCaptcha();
+      setInputCaptcha("");
       return;
     }
 
@@ -68,7 +69,7 @@ function LoginForm() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, captcha: "VALID" }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
@@ -146,28 +147,25 @@ function LoginForm() {
           {/* Captcha */}
           <div>
             <label className="block text-sm mb-1 text-gray-200">Captcha</label>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="px-3 py-2 rounded bg-emerald-600 text-white font-semibold tracking-widest">
-                {captchaText}
+            <div className="flex items-center gap-2">
+              <div className="bg-emerald-600/80 text-white font-bold px-3 py-2 rounded select-none tracking-wider">
+                {captcha}
               </div>
               <button
                 type="button"
-                className="px-3 py-2 rounded bg-white/10 border border-white/20 text-white hover:bg-white/20"
-                onClick={() => {
-                  setCaptchaText(generateCaptcha());
-                  setCaptchaInput("");
-                }}
+                onClick={generateCaptcha}
+                className="text-emerald-200 hover:text-white"
               >
-                Refresh
+                <FaRedo />
               </button>
             </div>
             <input
               name="captcha"
               type="text"
               placeholder="Masukkan captcha"
-              value={captchaInput}
-              onChange={(e) => setCaptchaInput(e.target.value)}
-              className="w-full p-3 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
+              value={inputCaptcha}
+              onChange={(e) => setInputCaptcha(e.target.value)}
+              className="w-full p-3 mt-2 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
             />
           </div>
 
