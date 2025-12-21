@@ -4,8 +4,11 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { username, password, captcha } = body;
 
-  if (!captcha || captcha !== "VALID") {
-    return NextResponse.json({ message: "Captcha salah" }, { status: 400 });
+  // Bypass captcha hanya saat testing
+  if (process.env.DISABLE_CAPTCHA !== "true") {
+    if (!captcha || captcha !== "VALID") {
+      return NextResponse.json({ message: "Captcha salah" }, { status: 400 });
+    }
   }
 
   if (username === "RobinOyako" && password === "Oyako123") {
