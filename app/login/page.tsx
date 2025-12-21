@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [captcha, setCaptcha] = useState("");
   const [error, setError] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -32,8 +33,8 @@ function LoginForm() {
     e.preventDefault();
     setError("");
 
-    if (!username || !password) {
-      setError("Username dan password wajib diisi!");
+    if (!username || !password || !captcha) {
+      setError("Username, password, dan captcha wajib diisi!");
       return;
     }
 
@@ -41,7 +42,7 @@ function LoginForm() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, captcha }),
       });
 
       const data = await res.json();
@@ -112,6 +113,19 @@ function LoginForm() {
               placeholder="Masukkan password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
+            />
+          </div>
+
+          {/* Captcha */}
+          <div>
+            <label className="block text-sm mb-1 text-gray-200">Captcha</label>
+            <input
+              name="captcha"
+              type="text"
+              placeholder="Masukkan captcha"
+              value={captcha}
+              onChange={(e) => setCaptcha(e.target.value)}
               className="w-full p-3 bg-white/10 border border-white/20 rounded focus:outline-none focus:border-emerald-300 text-white"
             />
           </div>
