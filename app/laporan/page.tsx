@@ -62,13 +62,8 @@ export default function LaporanPage() {
       .catch((err) => console.error("Gagal load tanggal:", err));
   }, []);
 
-  useEffect(() => {
-    if (!printMessage) return;
-    const timer = setTimeout(() => setPrintMessage(null), 3000);
-    return () => clearTimeout(timer);
-  }, [printMessage]);
-
   const openDetail = async (tgl: string) => {
+    setPrintMessage(null);
     setSelectedTanggal(tgl);
     setPopup(true);
     const res = await fetch(`/api/laporan-harian/${tgl}`);
@@ -204,12 +199,6 @@ export default function LaporanPage() {
           <div className="bg-white p-6 rounded-lg shadow-lg w-[840px] max-h-[95vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">Detail Laporan — {selectedTanggal}</h2>
 
-            {printMessage && (
-              <div className="mb-4 rounded bg-green-100 px-3 py-2 text-sm text-green-800">
-                {printMessage}
-              </div>
-            )}
-
             <div ref={tableRef} className="bg-white p-3">
               <div className="overflow-hidden rounded-lg border">
                 <table className="w-full">
@@ -256,13 +245,31 @@ export default function LaporanPage() {
               </button>
 
               <button
-                onClick={() => setPopup(false)}
+                onClick={() => {
+                  setPopup(false);
+                  setPrintMessage(null);
+                }}
                 className="px-4 py-2 bg-red-500 text-white rounded"
               >
                 Tutup
               </button>
             </div>
           </div>
+
+          {printMessage && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]">
+              <div className="bg-white p-5 rounded-lg shadow-lg w-[360px] text-center">
+                <h3 className="text-lg font-semibold mb-3">Berhasil</h3>
+                <p className="text-sm text-gray-700 mb-5">{printMessage}</p>
+                <button
+                  onClick={() => setPrintMessage(null)}
+                  className="px-4 py-2 rounded bg-green-600 text-white"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
