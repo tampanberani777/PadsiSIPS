@@ -204,6 +204,12 @@ export default function LaporanPage() {
           <div className="bg-white p-6 rounded-lg shadow-lg w-[840px] max-h-[95vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">Detail Laporan — {selectedTanggal}</h2>
 
+            {printMessage && (
+              <div className="mb-4 rounded bg-green-100 px-3 py-2 text-sm text-green-800">
+                {printMessage}
+              </div>
+            )}
+
             <div ref={tableRef} className="bg-white p-3">
               <div className="overflow-hidden rounded-lg border">
                 <table className="w-full">
