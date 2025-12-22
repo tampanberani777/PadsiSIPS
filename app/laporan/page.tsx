@@ -38,6 +38,7 @@ export default function LaporanPage() {
   const [loading, setLoading] = useState(true);
   const [popup, setPopup] = useState(false);
   const [filterDays, setFilterDays] = useState<number>(7);
+  const [printMessage, setPrintMessage] = useState<string | null>(null);
 
   const tableRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -60,6 +61,12 @@ export default function LaporanPage() {
       })
       .catch((err) => console.error("Gagal load tanggal:", err));
   }, []);
+
+  useEffect(() => {
+    if (!printMessage) return;
+    const timer = setTimeout(() => setPrintMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [printMessage]);
 
   const openDetail = async (tgl: string) => {
     setSelectedTanggal(tgl);
