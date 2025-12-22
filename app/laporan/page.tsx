@@ -93,7 +93,7 @@ export default function LaporanPage() {
 
     pdf.save(`Laporan-${selectedTanggal}.pdf`);
     const tanggalLabel = selectedTanggal ?? "tanggal tidak diketahui";
-    setPrintMessage(`Laporan ${tanggalLabel} berhasil dicetak`);
+    setPrintMessage(`Laporan ${tanggalLabel} berhasil dieksport sebagai PDF.`);
   };
 
   const chartData = {
