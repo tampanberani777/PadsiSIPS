@@ -97,6 +97,8 @@ export default function LaporanPage() {
     pdf.addImage(cImg, "PNG", 10, 20, 190, imgHeight);
 
     pdf.save(`Laporan-${selectedTanggal}.pdf`);
+    const tanggalLabel = selectedTanggal ?? "tanggal tidak diketahui";
+    setPrintMessage(`Laporan ${tanggalLabel} berhasil dicetak`);
   };
 
   const chartData = {
